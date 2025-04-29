@@ -1,29 +1,20 @@
+// database/config/config.js
 require('dotenv').config();
-console.log('DB URL:', process.env.DEV_DATABASE_URL);
-
-
 module.exports = {
   development: {
-       // si existe DEV_DATABASE_URL, Sequelize la usará en vez de los campos separados
     url: process.env.DEV_DATABASE_URL,
-    dialect: 'mysql'
-   },
+    dialect: 'postgres'
+  },
   test: {
-    username: 'root',
-    password: null,
-    database: 'database_test',
-    host: '34.138.140.86',
-    dialect: 'mysql'
+    url: process.env.TEST_DATABASE_URL,
+    dialect: 'postgres'
   },
   production: {
-     url: process.env.DATABASE_URL,
-     dialect: 'mysql',
+    url: process.env.DATABASE_URL,
+    dialect: 'postgres',
     dialectOptions: {
-      ssl: {
- require: true, 
-  rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false }
     }
-   
   }
 };
 
