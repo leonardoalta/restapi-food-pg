@@ -1,45 +1,45 @@
-name: Build & Push Docker Image (Food API)
+name: Build & Push Docker Image (Food-PG)
 
 on:
   push:
-    branches:
-      - master
+    branches: [ master ]
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     env:
-      # URL de BD para producción (Railway)
+      # La URL de tu PostgreSQL en Railway
       DATABASE_URL: ${{ secrets.FOOD_DATABASE_URL }}
+
     steps:
-      # 1. Chequear el código
+      # 1) Comprobar el código
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Preparar Node.js (para npm ci, tests o migraciones si las necesitas)
+      # 2) Setup Node.js (para instalar dependencias y opcionalmente migraciones/tests)
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3. Crear .env para producción
+      # 3) Crear .env con variables de producción
       - name: Create .env file
         run: |
           echo "NODE_ENV=production"       >> .env
           echo "DATABASE_URL=${DATABASE_URL}" >> .env
 
-      # 4. Instalar dependencias
+      # 4) Instalar dependencias
       - name: Install dependencies
         run: npm ci
 
-      # 5. Login a Docker Hub
+      # 5) Login en Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 6. Build y push de la imagen
+      # 6) Build y push de la imagen
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -47,5 +47,6 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_USER }}/restapi-food:${{ github.sha }}
-            ${{ secrets.DOCKER_USER }}/restapi-food:latest
+            ${{ secrets.DOCKER_USER }}/restapi-food-pg:${{ github.sha }}
+            ${{ secrets.DOCKER_USER }}/restapi-food-pg:latest
+
