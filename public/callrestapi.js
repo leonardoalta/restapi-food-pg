@@ -1,93 +1,129 @@
-// public/callrestapi.js
-
-// Ruta relativa al endpoint de tu API
 const API_URL = '/api/foods';
+let foodsData = [];
 
-/**
- * Muestra un mensaje de Bootstrap en el elemento #resultMessage
- * @param {string} message El texto a mostrar
- * @param {'success'|'danger'} type El tipo de alerta
- */
-function showMessage(message, type = 'success') {
+// Muestra alerta Bootstrap
+function showMessage(msg, type = 'success') {
   document.getElementById('resultMessage').innerHTML = `
     <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-      ${message}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-    </div>
-  `;
+      ${msg}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>`;
 }
 
-/**
- * Rellena la tabla de #usersTable con un array de objetos Food
- * @param {Array} foods Lista de comidas
- */
+// Limpia formulario y vuelve a modo “crear”
+function clearForm() {
+  document.getElementById('foodForm').reset();
+  document.getElementById('foodId').value = '';
+  document.getElementById('saveBtn').textContent = 'Guardar';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+// Renderiza la tabla con botones de acción
 function renderTable(foods) {
-  const tbody = document.querySelector('#usersTable tbody');
+  const tbody = document.querySelector('#foodsTable tbody');
   tbody.innerHTML = '';
-  foods.forEach(food => {
+  foods.forEach(f => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${food.id}</td>
-      <td>${food.name}</td>
-      <td>${food.description}</td>
-      <td>${food.price}</td>
-      <td>${food.category}</td>
-      <td>${new Date(food.createdAt).toLocaleString()}</td>
-    `;
+      <td>${f.id}</td>
+      <td>${f.name}</td>
+      <td>${f.category}</td>
+      <td>${f.price}</td>
+      <td>${f.description}</td>
+      <td>${new Date(f.createdAt).toLocaleString()}</td>
+      <td>
+        <button class="btn btn-sm btn-warning me-1" onclick="editFood(${f.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteFood(${f.id})">Borrar</button>
+      </td>`;
     tbody.appendChild(tr);
   });
 }
 
-/**
- * Llama al endpoint GET /api/foods y dibuja la tabla
- */
+// GET /api/foods
 async function getFoods() {
   try {
     const res = await fetch(API_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { foods } = await res.json();
+    foodsData = foods;
     renderTable(foods);
-  } catch (err) {
-    console.error('Error fetching foods:', err);
+  } catch {
     showMessage('Error al cargar comidas', 'danger');
   }
 }
 
-/**
- * Envía el formulario #userForm como POST /api/foods
- * @param {Event} e Evento submit
- */
-async function postFood(e) {
-  e.preventDefault();
-  const form = document.getElementById('userForm');
-  const data = {
-    name:        form.name.value.trim(),
-    description: form.description.value.trim(),
-    price:       parseFloat(form.price.value) || 0,
-    category:    form.category.value.trim()
+// POST /api/foods
+async function postFood() {
+  const payload = {
+    name:        document.getElementById('name').value,
+    category:    document.getElementById('category').value,
+    price:       parseFloat(document.getElementById('price').value) || 0,
+    description: document.getElementById('description').value
   };
-
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await res.json();
-    showMessage('Comida creada con éxito');
-    form.reset();
-    getFoods();
-  } catch (err) {
-    console.error('Error creating food:', err);
-    showMessage('Error al crear comida', 'danger');
-  }
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(res.statusText);
+  showMessage('Comida creada');
+  clearForm();
+  getFoods();
 }
 
-// Asigna los eventos al cargar la página
-document.getElementById('userForm').addEventListener('submit', postFood);
-document.getElementById('loadUsersBtn').addEventListener('click', getFoods);
+// PUT /api/foods/:id
+async function updateFood(id) {
+  const payload = {
+    name:        document.getElementById('name').value,
+    category:    document.getElementById('category').value,
+    price:       parseFloat(document.getElementById('price').value) || 0,
+    description: document.getElementById('description').value
+  };
+  const res = await fetch(`${API_URL}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(res.statusText);
+  showMessage('Comida actualizada');
+  clearForm();
+  getFoods();
+}
 
-// Carga la lista automáticamente al inicio
-getFoods();
+// DELETE /api/foods/:id
+async function deleteFood(id) {
+  if (!confirm('¿Eliminar comida?')) return;
+  const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+  if (res.status !== 204) throw new Error(res.statusText);
+  showMessage('Comida borrada', 'warning');
+  getFoods();
+}
+
+// Carga datos en el formulario para edición
+function editFood(id) {
+  const f = foodsData.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById('foodId').value       = f.id;
+  document.getElementById('name').value         = f.name;
+  document.getElementById('category').value     = f.category;
+  document.getElementById('price').value        = f.price;
+  document.getElementById('description').value  = f.description;
+  document.getElementById('saveBtn').textContent     = 'Actualizar';
+  document.getElementById('cancelEditBtn').style.display = 'inline-block';
+}
+
+// Manejador de submit (crear o actualizar)
+async function saveFood(evt) {
+  evt.preventDefault();
+  const id = document.getElementById('foodId').value;
+  if (id) await updateFood(id);
+  else    await postFood();
+}
+
+// Inicialización
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('foodForm').addEventListener('submit', saveFood);
+  document.getElementById('cancelEditBtn').addEventListener('click', clearForm);
+  document.getElementById('loadFoodsBtn').addEventListener('click', getFoods);
+  getFoods();
+});
 
